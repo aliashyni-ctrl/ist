@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Тамбовщина. Сейчас</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/vue-router@4"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="articles-part1.js"></script>
+  <script src="articles-part2.js"></script>
+  <script src="articles-part3.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f4f2ee; color: #1a1a1a; line-height: 1.5; padding-bottom: 80px; }
+    a { color: inherit; text-decoration: none; }
+    .container { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+    .header { background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,0,0,0.04); position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(0,0,0,0.04); }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 0; gap: 18px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.4rem; color: #1e3a5f; padding-left: 10px; }
+    .logo svg { height: 38px; width: 38px; flex-shrink: 0; }
+    .search-box { position: relative; flex: 1; min-width: 200px; max-width: 100%; }
+    .search-box input { width: 100%; padding: 10px 16px; border: 1px solid #e0ded9; border-radius: 28px; font-size: 0.95rem; background: #fff; }
+    .search-box input:focus { outline: none; border-color: #b13e3e; box-shadow: 0 4px 14px rgba(177,62,62,0.12); }
+    .suggestions { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid #eee; border-radius: 16px; box-shadow: 0 16px 32px rgba(0,0,0,0.08); z-index: 2000; max-height: 360px; overflow-y: auto; padding: 6px 0; width: 100%; }
+    .suggestion-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; }
+    .suggestion-item:hover { background: #f8f6f2; }
+    .suggestion-item .info { flex: 1; }
+    .suggestion-item .title { font-weight: 600; font-size: 0.9rem; }
+    .suggestion-item .desc { font-size: 0.8rem; color: #777; }
+    .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 28px; padding: 10px 0 30px; }
+    .fact-card { background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.04); transition: transform 0.25s, box-shadow 0.25s; display: flex; flex-direction: column; }
+    .fact-card:hover { transform: translateY(-6px); box-shadow: 0 18px 32px rgba(0,0,0,0.08); }
+    .fact-card .content { padding: 18px 20px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .fact-card h3 { font-size: 1.25rem; color: #1e3a5f; }
+    .fact-card p { font-size: 0.92rem; color: #555; flex: 1; }
+    .fact-card .meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .fact-card .tag { background: #f0ece4; color: #6b5e4e; padding: 4px 10px; border-radius: 16px; font-weight: 500; font-size: 0.8rem; }
+    .actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 9px 20px; background: #b13e3e; color: #fff; border: none; border-radius: 24px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 10px rgba(177,62,62,0.2); cursor: pointer; transition: background 0.2s; }
+    .btn:hover { background: #9a2e2e; }
+    .article-detail { position: relative; max-width: 760px; margin: 0 auto; padding: 30px 0; }
+    .back-arrow { position: absolute; left: -60px; top: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.04); color: #555; cursor: pointer; }
+    .back-arrow:hover { background: #f5f5f5; color: #111; }
+    .article-detail h1 { font-size: 2.1rem; color: #1e3a5f; margin-bottom: 14px; }
+    .article-lead { font-size: 1.2rem; color: #555; margin-bottom: 24px; font-style: italic; border-left: 4px solid #b13e3e; padding-left: 16px; }
+    .article-text { font-size: 1rem; line-height: 1.8; color: #333; white-space: normal; margin-bottom: 32px; }
+    .article-text h3 { margin: 24px 0 12px; color: #1e3a5f; }
+    .article-text strong { font-weight: 700; color: #2c3e4e; }
+    .article-text em { font-style: italic; color: #6b5e4e; }
+    .article-text table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .article-text th, .article-text td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+    .article-text th { background: #f5f2ed; font-weight: 700; }
+    .map-container { height: 500px; border-radius: 20px; overflow: hidden; margin: 20px 0; box-shadow: 0 8px 24px rgba(0,0,0,0.04); }
+    .video-container { margin: 20px 0; border-radius: 20px; overflow: hidden; background: #000; }
+    .video-container video { width: 100%; display: block; }
+    .timeline { position: relative; padding: 20px 0; }
+    .timeline-event { display: flex; gap: 22px; padding: 18px 0 18px 36px; border-left: 3px solid #b13e3e; position: relative; }
+    .timeline-event::before { content: ''; width: 14px; height: 14px; background: #b13e3e; border-radius: 50%; position: absolute; left: -8.5px; top: 24px; border: 2px solid #fff; box-shadow: 0 0 0 2px #b13e3e; }
+    .timeline-date { font-weight: 700; color: #b13e3e; min-width: 90px; }
+    .search-filters { display: flex; flex-wrap: wrap; gap: 22px; margin: 24px 0; align-items: center; background: #fff; padding: 18px 22px; border-radius: 18px; }
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); box-shadow: 0 -2px 16px rgba(0,0,0,0.05); display: flex; justify-content: space-around; align-items: center; padding: 8px 0 12px; z-index: 1000; }
+    .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.7rem; color: #888; text-decoration: none; padding: 4px 12px; }
+    .tab-item.router-link-active { color: #b13e3e; }
+    .tab-item svg { width: 22px; height: 22px; }
+    @media (max-width: 768px) {
+      .header-inner { flex-direction: column; align-items: stretch; }
+      .search-box { max-width: 100%; }
+      .feed { grid-template-columns: 1fr; }
+      .back-arrow { position: relative; left: 0; top: 0; margin-bottom: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const { createApp, ref, computed, watch, onMounted, defineComponent } = Vue;
+    const { createRouter, createWebHashHistory, useRoute, useRouter } = VueRouter;
+
+    const icons = {
+      logoIcon: `<svg width="38" height="38" viewBox="0 0 38 38"><rect width="38" height="38" rx="10" fill="#F5EFE4"/><path d="M10 12h18v2H10zm0 6h18v2H10zm0 6h14v2H10z" fill="#B13E3E"/><circle cx="28" cy="26" r="3.5" fill="#B13E3E"/></svg>`,
+      home: `<svg viewBox="0 0 24 24"><path d="M3 12l9-9 9 9v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+      articles: `<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" fill="none"/></svg>`,
+      timeline: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+      map: `<svg viewBox="0 0 24 24"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+      video: `<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><polygon points="10 8 16 12 10 16" fill="currentColor"/></svg>`,
+      arrowLeft: `<svg width="20" height="20" viewBox="0 0 20 20"><path d="M12 5l-5 5 5 5" stroke="currentColor" stroke-width="2" fill="none"/></svg>`
+    };
+
+    const articles = window.articlesData || [];
+
+    const videos = [
+      { id:"vid1", title:"Тамбовщина изнутри: быт и история", subtitle:"Короткометражный фильм о тамбовской деревне, снятый на основе архивных материалов", url:"видеотест.mp4" }
+    ];
+
+    const mapPoints = [
+      { id:"mp1", lat:52.73, lng:41.45, title:"Тамбов (центр)", description:"Исторический центр города, Соборная площадь, Краеведческий музей." },
+      { id:"mp2", lat:52.65, lng:41.40, title:"Усадьба Асеевых", description:"Дворец в стиле модерн, музей, филиал Петергофа." },
+      { id:"mp3", lat:52.35, lng:42.05, title:"Ивановка (музей Рахманинова)", description:"Усадьба, где написан Второй концерт, ежегодный фестиваль сирени." },
+      { id:"mp4", lat:52.90, lng:42.00, title:"Осино-Гай", description:"Родина Зои Космодемьянской, школьный музей." },
+      { id:"mp5", lat:52.95, lng:40.50, title:"Мичуринск (Козлов)", description:"Родина Мичурина и художника Герасимова, дом-музей." },
+      { id:"mp6", lat:52.80, lng:41.30, title:"Село Бондари", description:"Троицкая церковь, метрические книги XIX века." },
+      { id:"mp7", lat:52.55, lng:41.35, title:"Воронинский заповедник", description:"Уникальный дубовый лес, редкие виды растений." },
+      { id:"mp8", lat:52.70, lng:41.60, title:"Моршанск", description:"Купеческий город, Никольский собор, краеведческий музей." },
+      { id:"mp9", lat:52.45, lng:41.50, title:"Кирсанов", description:"Уездный город с классической застройкой, Троицкий собор." },
+      { id:"mp10", lat:52.30, lng:41.70, title:"Уварово", description:"Христорождественский храм, деревянная резьба." },
+      { id:"mp11", lat:52.85, lng:41.95, title:"Рассказово", description:"Центр гончарного промысла, музей керамики." },
+      { id:"mp12", lat:52.20, lng:42.20, title:"Борисоглебск", description:"Борисоглебский собор, купеческие особняки." },
+      { id:"mp13", lat:52.98, lng:41.55, title:"Покрово-Марфино", description:"Усадьба князей Волконских, руины парка." },
+      { id:"mp14", lat:53.05, lng:41.90, title:"Вернадовка", description:"Имение Вернадского, музей биосферы." },
+      { id:"mp15", lat:52.75, lng:42.10, title:"Село Грязнуха", description:"Место крестьянских волнений XIX века." }
+    ];
+
+    const timelineEvents = [
+      { date:"1636", title:"Основание Тамбовской крепости" },
+      { date:"1780", title:"Учреждение Казанской ярмарки" },
+      { date:"1786", title:"Открытие театра Державиным" },
+      { date:"1812", title:"Тамбовское ополчение" },
+      { date:"1870", title:"План регулярной застройки Тамбова" },
+      { date:"1890", title:"Первое лето Рахманинова в Ивановке" },
+      { date:"1904", title:"Построена усадьба Асеевых" },
+      { date:"1905", title:"Революция и погром в Тамбове" },
+      { date:"1915", title:"Эвакуация порохового завода в Котовск" },
+      { date:"1921", title:"Голод, помощь АРА" },
+      { date:"1941", title:"Подвиг Зои Космодемьянской" },
+      { date:"1955", title:"Начало строительства ГЭС на Цне" },
+      { date:"2006", title:"Открытие памятника тамбовскому волку" }
+    ];
+
+    function buildTrigrams(str) {
+      const s = str.toLowerCase().replace(/\s+/g, ' ').trim();
+      const trigrams = new Set();
+      for (let i = 0; i <= s.length - 3; i++) trigrams.add(s.substring(i, i + 3));
+      return trigrams;
+    }
+
+    articles.forEach(a => {
+      const haystack = [a.title, a.lead, ...a.tags, String(a.year || ''), ...(a.searchTerms || [])].join(' ');
+      a._trigrams = buildTrigrams(haystack);
+    });
+
+    const facts = articles.map(a => ({
+      id: 'f_'+a.id,
+      title: a.title,
+      short_text: a.lead,
+      type: 'article',
+      tags: a.tags,
+      detail_type: 'article',
+      detail_id: a.id,
+      _trigrams: a._trigrams
+    }));
+
+    facts.push({
+      id: 'f_vid1',
+      title: "Тамбовщина изнутри",
+      short_text: "Короткометражный фильм о тамбовской деревне и быте.",
+      type: 'video',
+      tags: ["видео","культура"],
+      detail_type: 'video',
+      detail_id: 'vid1',
+      _trigrams: buildTrigrams("Тамбовщина изнутри быт деревня видео")
+    });
+
+    function getArticleById(id) { return articles.find(a => a.id === id); }
+    function getVideoById(id) { return videos.find(v => v.id === id); }
+
+    const QuickSearch = defineComponent({
+      setup() {
+        const query = ref(''); const suggestions = ref([]); const show = ref(false);
+        const router = useRouter(); let timer = null;
+        function fetchSuggestions(q) {
+          if (!q.trim()) { suggestions.value = []; show.value = false; return; }
+          const qTrigrams = buildTrigrams(q);
+          const scored = facts.map(f => {
+            let matches = 0;
+            for (let t of qTrigrams) if (f._trigrams.has(t)) matches++;
+            return { ...f, score: qTrigrams.size ? matches / qTrigrams.size : 0 };
+          }).filter(r => r.score > 0.3).sort((a,b) => b.score - a.score).slice(0,10);
+          suggestions.value = scored; show.value = scored.length > 0;
+        }
+        watch(query, v => { clearTimeout(timer); timer = setTimeout(() => fetchSuggestions(v), 300); });
+        function onSelect(s) { show.value = false; query.value = ''; router.push(`/${s.detail_type}/${s.detail_id}`); }
+        function onEnter() { if (query.value.trim()) { router.push({ path: '/search', query: { q: query.value.trim() } }); show.value = false; query.value = ''; } }
+        return { query, suggestions, show, onSelect, onEnter };
+      },
+      template: `<div class="search-box"><input type="text" v-model="query" placeholder="Быстрый поиск..." @keyup.enter="onEnter" @focus="query && fetchSuggestions(query)" @blur="setTimeout(() => show = false, 200)" /><div v-if="show && suggestions.length" class="suggestions"><div v-for="s in suggestions" :key="s.id" class="suggestion-item" @mousedown.prevent="onSelect(s)"><div class="info"><div class="title">{{ s.title }}</div><div class="desc">{{ s.short_text?.substring(0,70) }}...</div></div></div></div></div>`
+    });
+
+    const AppLayout = {
+      template: `<div><header class="header"><div class="container header-inner"><div class="logo"><span v-html="icons.logoIcon"></span> Тамбовщина. Сейчас</div><QuickSearch /></div></header><main class="container"><router-view /></main><nav class="tab-bar"><router-link to="/" class="tab-item" exact-active-class="router-link-active"><span v-html="icons.home"></span>Лента</router-link><router-link to="/articles" class="tab-item" active-class="router-link-active"><span v-html="icons.articles"></span>Статьи</router-link><router-link to="/video" class="tab-item" active-class="router-link-active"><span v-html="icons.video"></span>Видео</router-link><router-link to="/timeline" class="tab-item" active-class="router-link-active"><span v-html="icons.timeline"></span>Таймлайн</router-link><router-link to="/map" class="tab-item" active-class="router-link-active"><span v-html="icons.map"></span>Карта</router-link></nav></div>`,
+      data() { return { icons }; }
+    };
+
+    const FeedPage = { setup() { return { facts }; }, template: `<div class="feed"><div v-for="fact in facts" :key="fact.id" class="fact-card"><div class="content"><h3>{{ fact.title }}</h3><p>{{ fact.short_text }}</p><div class="meta"><span v-for="tag in fact.tags" :key="tag" class="tag">#{{ tag }}</span></div><div class="actions"><router-link :to="'/' + fact.detail_type + '/' + fact.detail_id" class="btn">Подробнее</router-link></div></div></div></div>` };
+    const ArticleListPage = { setup() { return { articles }; }, template: `<div class="feed"><div v-for="a in articles" :key="a.id" class="fact-card"><div class="content"><h3>{{ a.title }}</h3><p>{{ a.lead }}</p><div class="actions"><router-link :to="'/article/' + a.id" class="btn">Читать</router-link></div></div></div></div>` };
+    const ArticleDetailPage = defineComponent({ setup() { const route = useRoute(); const article = computed(() => getArticleById(route.params.id)); const goBack = () => window.history.back(); return { article, icons, goBack }; }, template: `<div v-if="article" class="article-detail"><div class="back-arrow" @click="goBack"><span v-html="icons.arrowLeft"></span></div><h1>{{ article.title }}</h1><p class="article-lead">{{ article.lead }}</p><div class="article-text" v-html="article.text"></div></div><div v-else>Не найдено</div>` });
+    const VideoListPage = { setup() { return { videos }; }, template: `<div class="feed"><div v-for="v in videos" :key="v.id" class="fact-card"><div class="content"><h3>{{ v.title }}</h3><p>{{ v.subtitle }}</p><div class="actions"><router-link :to="'/video/' + v.id" class="btn">Смотреть</router-link></div></div></div></div>` };
+    const VideoDetailPage = defineComponent({ setup() { const route = useRoute(); const video = computed(() => getVideoById(route.params.id)); const goBack = () => window.history.back(); return { video, goBack, icons }; }, template: `<div class="article-detail"><div class="back-arrow" @click="goBack"><span v-html="icons.arrowLeft"></span></div><h1>{{ video?.title }}</h1><div class="video-container"><video controls :src="video.url" style="width:100%" preload="metadata">Ваш браузер не поддерживает видео</video></div><p>{{ video?.subtitle }}</p></div>` });
+    const TimelinePage = { setup() { return { timelineEvents }; }, template: `<div><h2>Хронология</h2><div class="timeline"><div v-for="ev in timelineEvents" :key="ev.date" class="timeline-event"><span class="timeline-date">{{ ev.date }}</span><span>{{ ev.title }}</span></div></div></div>` };
+    const MapPage = defineComponent({ setup() { onMounted(() => { const map = L.map('map-container', { attributionControl: false }).setView([52.72, 41.45], 8); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '' }).addTo(map); mapPoints.forEach(mp => { L.marker([mp.lat, mp.lng]).addTo(map).bindPopup(`<b>${mp.title}</b><br/>${mp.description}`); }); }); return {}; }, template: `<div><h2>Карта Тамбовской области</h2><div id="map-container" class="map-container"></div><p style="color:#666; font-size:0.8rem;">Нажмите на маркер для информации о месте</p></div>` });
+    const SearchPage = defineComponent({ setup() { const route = useRoute(); const router = useRouter(); const q = ref(route.query.q || ''); const results = ref([]); function search() { const query = q.value.toLowerCase().trim(); let all = facts.map(f => ({...f, searchText: f.title+' '+f.short_text, link: `/${f.detail_type}/${f.detail_id}`})); if (query) all = all.filter(i => i.searchText.toLowerCase().includes(query)); results.value = all; } watch(q, () => { router.replace({ query: { q: q.value || undefined } }); search(); }, { immediate: true }); onMounted(search); return { query: q, results }; }, template: `<div><h2>Поиск по сайту</h2><div class="search-filters"><input v-model="query" placeholder="Поиск..." style="flex:1; padding:8px; border-radius:24px; border:1px solid #ddd;" /></div><div class="feed"><div v-for="item in results" :key="item.id" class="fact-card"><div class="content"><h3>{{ item.title }}</h3><p>{{ item.short_text }}</p><router-link :to="item.link" class="btn">Открыть</router-link></div></div><div v-if="!results.length" style="padding:20px;">Ничего не найдено</div></div></div>` });
+
+    const router = createRouter({ history: createWebHashHistory(), routes: [
+      { path: '/', component: FeedPage }, { path: '/articles', component: ArticleListPage }, { path: '/article/:id', component: ArticleDetailPage },
+      { path: '/video', component: VideoListPage }, { path: '/video/:id', component: VideoDetailPage },
+      { path: '/map', component: MapPage }, { path: '/timeline', component: TimelinePage }, { path: '/search', component: SearchPage }
+    ] });
+    const app = createApp(AppLayout); app.component('QuickSearch', QuickSearch); app.use(router); app.mount('#app');
+  </script>
+  <footer style="text-align:center; padding:20px; color:#888; font-size:0.7rem;">
+    Проект «Тамбовщина. Сейчас» — тексты и история без иллюстраций.
+  </footer>
+</body>
+</html>
